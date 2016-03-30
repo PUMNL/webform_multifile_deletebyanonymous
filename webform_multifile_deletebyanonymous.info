@@ -1,0 +1,10 @@
+; $Id$
+name = Webform multifile delete
+description = Disables the access check for deleting files.
+core = 7.x
+package = Webform
+
+dependencies[] = webform_multifile
+
+core = 7.x
+

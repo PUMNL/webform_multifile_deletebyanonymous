@@ -1,0 +1,115 @@
+<?php
+/**
+ * @author Jaap Jansma (CiviCooP) <jaap.jansma@civicoop.org>
+ * @license http://www.gnu.org/licenses/agpl-3.0.html
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function webform_multifile_deletebyanonymous_menu() {
+  $items = array();
+  $items['webform_multifile_deletebyanonymous/%'] = array(
+    'title' => 'Delete multifile upload',
+    'page callback' => 'webform_multifile_deletebyanonymous',
+    'delivery callback' => 'webform_multifile_deletebyanonymous_delivery',
+    'page arguments' => array(1),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function webform_multifile_deletebyanonymous_theme() {
+  $theme = array(
+    'webform_multifile_deletebyanonymous_render_multifile' => array(
+      'render element' => 'element',
+    ),
+  );
+  return $theme;
+}
+
+/**
+ * Implements hook_webform_component_render_alter().
+ */
+function webform_multifile_deletebyanonymous_webform_component_render_alter(&$element, &$component) {
+  if ($component['type'] == 'multifile') {
+    $element['#theme'] = 'webform_multifile_deletebyanonymous_render_multifile';
+  }
+}
+
+/**
+ * Render a File component.
+ *
+ * @param array $variables
+ *   The variables used for rendering.
+ *
+ * @return string
+ *   The rendered html
+ */
+function theme_webform_multifile_deletebyanonymous_render_multifile($variables) {
+  $element = $variables['element'];
+  // Add information about the existing file, if any.
+  if (isset($element['#default_value'])) {
+    $element['_fids']['#value'] = $element['#default_value'];
+  }
+  $value = $element['_fids']['#value'] ? $element['_fids']['#value'] : $element['_old_fids']['#value'];
+
+  if ($fids = unserialize($value)) {
+    $element['files'] = array();
+    foreach ($fids as $k => $fid) {
+      $file = file_load($fid);
+      if (!$file) {
+        unset($fids[$k]);
+        continue;
+      }
+      $fileElement = array();
+      $fileElement['file'] = array(
+        '#prefix' => '<div class="multifile-file">',
+        '#suffix' => '</div>',
+        '#markup' => l(t('Download !filename', array('!filename' => webform_multifile_name($file->uri))), webform_multifile_url($file->uri)) . ' '.'<a onclick="webform_multifile_deletebyanonymous_delete(\''.$file->fid.'\', this); return false;" href="#">'.t('Delete').'</a>',
+      );
+      $element['files'][] = $fileElement;
+    }
+
+    $variables['element']['_old_fids']['#value'] = serialize($fids);
+    $variables['element']['_fids']['#value'] = serialize($fids);
+    $element['_old_fids']['#value'] = serialize($fids);
+  }
+
+  // Add the required asterisk.
+  if ($element['#webform_required']) {
+    $element[$element['#webform_form_key']]['#required'] = TRUE;
+  }
+
+  drupal_add_js(drupal_get_path('module', 'webform_multifile_deletebyanonymous') . '/webform_multifile_deletebyanonymous.js');
+
+  return drupal_render_children($element);
+}
+
+/**
+ * Echos a json string that deletion was succesfull
+ * 
+ * @param $page_callback_result
+ */
+function webform_multifile_deletebyanonymous_delivery($page_callback_result) {
+  echo drupal_json_output(array('deleted' => 1));
+}
+
+/**
+ * Menu callback to delete a single file from a multifile upload.
+ *
+ * Only files which are not used by any drupal entity could be deleted
+ *
+ * @param int $fid
+ *   The file Id to delete
+ */
+function webform_multifile_deletebyanonymous($fid) {
+  $file = file_load($fid);
+  if ($file && file_exists($file->uri)) {
+    file_delete($file, false);
+  }
+}
