@@ -56,14 +56,29 @@ function theme_webform_multifile_deletebyanonymous_render_multifile($variables) 
   if (isset($element['#default_value'])) {
     $element['_fids']['#value'] = $element['#default_value'];
   }
-  $value = $element['_fids']['#value'] ? $element['_fids']['#value'] : $element['_old_fids']['#value'];
 
-  if ($fids = unserialize($value)) {
+  $value = array();
+
+  if(!empty($element['_fids']['#value'])) {
+    $value = $element['_fids']['#value'];
+  } elseif(!empty($element['_old_fids']['#value'])) {
+    $value = $element['_old_fids']['#value'];
+  }
+
+  if(!empty($value)){
+    try {
+      $files = json_decode($value);
+    } catch(Exception $e) {
+
+    }
+  }
+
+  if(!empty($files) && is_array($files)) {
     $element['files'] = array();
-    foreach ($fids as $k => $fid) {
+    foreach ($files as $k => $fid) {
       $file = file_load($fid);
       if (!$file) {
-        unset($fids[$k]);
+        unset($files[$k]);
         continue;
       }
       $fileElement = array();
@@ -75,9 +90,9 @@ function theme_webform_multifile_deletebyanonymous_render_multifile($variables) 
       $element['files'][] = $fileElement;
     }
 
-    $variables['element']['_old_fids']['#value'] = serialize($fids);
-    $variables['element']['_fids']['#value'] = serialize($fids);
-    $element['_old_fids']['#value'] = serialize($fids);
+    $variables['element']['_old_fids']['#value'] = json_encode($files);
+    $variables['element']['_fids']['#value'] = json_encode($files);
+    $element['_old_fids']['#value'] = json_encode($files);
   }
 
   // Add the required asterisk.
@@ -92,7 +107,7 @@ function theme_webform_multifile_deletebyanonymous_render_multifile($variables) 
 
 /**
  * Echos a json string that deletion was succesfull
- * 
+ *
  * @param $page_callback_result
  */
 function webform_multifile_deletebyanonymous_delivery($page_callback_result) {
