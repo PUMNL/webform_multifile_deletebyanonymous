@@ -2,9 +2,6 @@
 name = Webform multifile delete
 description = Disables the access check for deleting files.
 core = 7.x
+version = 7.x-1.0
 package = Webform
-
 dependencies[] = webform_multifile
-
-core = 7.x
-
